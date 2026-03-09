@@ -104,6 +104,19 @@ POST /links/shorten
 }
 ```
 
+Пример реального ответа
+```
+{
+  "short_code": "peaky",
+  "short_url": "https://three-fastapi-shortlinks.onrender.com/peaky",
+  "original_url": "https://www.kinopoisk.ru/film/5461947/?utm_referrer=organic.kinopoisk.ru",
+  "created_at": "2026-03-09T20:49:44.884592Z",
+  "expires_at": "2026-06-20T20:12:00Z",
+  "click_limit": 1000
+}
+```
+Когда мы переходим по ссылке с поля [short_url](https://three-fastapi-shortlinks.onrender.com/peaky), то переходим на оригинальный сайт
+
 ### 4. Поиск ссылки по оригинальному URL
 
 GET /links/search?original_url={url}
