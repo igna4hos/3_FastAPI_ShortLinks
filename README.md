@@ -294,3 +294,98 @@ GET /links/popular
 uvicorn app.main:app --reload
 ```
 Сам же проект развёрнут при помощи сайта [render](https://three-fastapi-shortlinks.onrender.com/docs#/)
+
+## Тестирование
+
+Тесты находятся в папке `tests/` на одном уровне с `app/`.
+
+### Что покрыто
+
+- unit-тесты для `security`, `shortcode`, `cache`, `datetime_utils`, `cleanup_worker`, `link_lifecycle`, зависимостей и ключевых route-функций;
+- функциональные API-тесты через `httpx.AsyncClient` и ASGI-приложение FastAPI;
+- CRUD-сценарии для коротких ссылок, поиск, статистика, редиректы, популярные ссылки, история архивных ссылок;
+- проверки невалидных данных, авторизации, владения ссылкой и сценариев с истечением срока жизни/лимита кликов;
+- load-тест сценария массового создания ссылок и чтения популярных/редиректных маршрутов через Locust.
+
+### Как запустить
+
+Установка зависимостей:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Запуск тестов:
+
+```bash
+pytest tests
+```
+
+Проверка покрытия:
+
+```bash
+coverage erase
+coverage run -m pytest tests
+coverage report
+coverage html
+```
+
+### Текущее покрытие
+
+- текущее покрытие приложения (`app/`): `98%`
+- текстовый отчёт: `coverage-summary.txt`
+- HTML-отчёт: `htmlcov/index.html`
+
+| Name                              | Stmts | Miss | Cover | Missing        |
+|-----------------------------------|------:|-----:|------:|----------------|
+| app/api/deps.py                   | 29    | 0    | 100%  |                |
+| app/api/routes/__init__.py        | 2     | 0    | 100%  |                |
+| app/api/routes/auth.py            | 26    | 5    | 81%   | 20-24          |
+| app/api/routes/links.py           | 151   | 3    | 98%   | 72, 120, 281   |
+| app/core/config.py                | 29    | 0    | 100%  |                |
+| app/core/security.py              | 22    | 0    | 100%  |                |
+| app/db/base.py                    | 3     | 0    | 100%  |                |
+| app/db/session.py                 | 8     | 0    | 100%  |                |
+| app/main.py                       | 34    | 0    | 100%  |                |
+| app/models/__init__.py            | 4     | 0    | 100%  |                |
+| app/models/expired_link.py        | 18    | 0    | 100%  |                |
+| app/models/link.py                | 21    | 0    | 100%  |                |
+| app/models/user.py                | 11    | 0    | 100%  |                |
+| app/schemas/auth.py               | 16    | 0    | 100%  |                |
+| app/schemas/link.py               | 63    | 1    | 98%   | 23             |
+| app/services/cache.py             | 49    | 0    | 100%  |                |
+| app/services/cleanup_worker.py    | 27    | 0    | 100%  |                |
+| app/services/datetime_utils.py    | 12    | 0    | 100%  |                |
+| app/services/link_lifecycle.py    | 62    | 0    | 100%  |                |
+| app/services/shortcode.py         | 5     | 0    | 100%  |                |
+| **TOTAL**                         | **592** | **9** | **98%** |                |
+
+### Load testing
+
+Локальный сервер для нагрузочного теста:
+
+```bash
+uvicorn tests.load.load_app:app --host 127.0.0.1 --port 8001
+```
+
+Запуск Locust в headless-режиме:
+
+```bash
+locust -f tests/load/locustfile.py --headless -u 20 -r 5 -t 20s --host http://127.0.0.1:8001 --csv=tests/load/results/locust --html=tests/load/results/locust.html
+```
+
+### Результаты последнего прогона Locust
+
+- суммарно обработано `2522` запросов, ошибок `0`
+- агрегированное среднее время ответа: `5.79 ms`, median: `5 ms`, p95: `12 ms`, p99: `30 ms`
+- `POST /links/shorten`: `1313` запросов, avg `6.98 ms`, p95 `13 ms`
+- `GET /{short_code}`: `740` запросов, avg `6.05 ms`, p95 `14 ms`
+- `GET /links/popular`: `469` запросов, avg `2.05 ms`, p95 `4 ms`
+
+Нагрузочные артефакты:
+
+- HTML-отчёт Locust: `tests/load/results/locust.html`
+- CSV-метрики: `tests/load/results/locust_stats.csv`
+- сценарий нагрузки: `tests/load/locustfile.py`
+
+Кэширование заметно помогает маршруту `GET /links/popular`: в смешанной нагрузке медиана держится на 2 ms, p95 на 4 ms, что ниже, чем у редиректа и создания ссылки.
