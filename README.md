@@ -362,7 +362,7 @@ coverage html
 
 ![Locust Test Report](tests/docs/locust_report_image.png)
 
-### Load testing
+### Нагрузочное тестрование
 
 Локальный сервер для нагрузочного теста:
 
@@ -384,7 +384,7 @@ locust -f tests/load/locustfile.py --headless -u 20 -r 5 -t 20s --host http://12
 - `GET /{short_code}`: `740` запросов, avg `6.05 ms`, p95 `14 ms`
 - `GET /links/popular`: `469` запросов, avg `2.05 ms`, p95 `4 ms`
 
-Нагрузочные артефакты:
+Файлики с результатами:
 
 - HTML-отчёт Locust: `tests/load/results/locust.html`
 - CSV-метрики: `tests/load/results/locust_stats.csv`
