@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Optional
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.expired_link import ExpiredLink
 from app.models.link import ShortLink
-from app.services.datetime_utils import utc_now
+from app.services.datetime_utils import ensure_utc, utc_now
 
 
 async def archive_and_delete_link(session: AsyncSession, link: ShortLink, reason: str) -> None:
@@ -40,8 +40,9 @@ async def resolve_short_code_and_track_click(
         return None, False
 
     now = utc_now()
+    expires_at = ensure_utc(link.expires_at)
 
-    if link.expires_at and link.expires_at <= now:
+    if expires_at and expires_at <= now:
         await archive_and_delete_link(session, link, reason="expired_at")
         await session.commit()
         return None, False
@@ -72,23 +73,26 @@ async def cleanup_expired_and_unused_links(
     now = utc_now()
     cutoff = now - timedelta(days=unused_days_threshold)
 
-    stmt = select(ShortLink).where(
-        and_(
-            ShortLink.is_active.is_(True),
-            or_(
-                and_(ShortLink.expires_at.is_not(None), ShortLink.expires_at <= now),
-                and_(ShortLink.click_limit.is_not(None), ShortLink.click_count >= ShortLink.click_limit),
-                and_(ShortLink.last_used_at.is_not(None), ShortLink.last_used_at <= cutoff),
-                and_(ShortLink.last_used_at.is_(None), ShortLink.created_at <= cutoff),
-            ),
-        )
-    )
+    stmt = select(ShortLink).where(ShortLink.is_active.is_(True))
     result = await session.execute(stmt)
     links = result.scalars().all()
 
     removed_codes: list[str] = []
     for link in links:
-        if link.expires_at and link.expires_at <= now:
+        expires_at = ensure_utc(link.expires_at)
+        last_used_at = ensure_utc(link.last_used_at)
+        created_at = ensure_utc(link.created_at)
+
+        should_remove = (
+            (expires_at is not None and expires_at <= now)
+            or (link.click_limit is not None and link.click_count >= link.click_limit)
+            or (last_used_at is not None and last_used_at <= cutoff)
+            or (last_used_at is None and created_at is not None and created_at <= cutoff)
+        )
+        if not should_remove:
+            continue
+
+        if expires_at and expires_at <= now:
             reason = "expired_at"
         elif link.click_limit is not None and link.click_count >= link.click_limit:
             reason = "click_limit_reached"

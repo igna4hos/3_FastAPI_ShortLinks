@@ -38,7 +38,7 @@ from app.services.cache import (
     invalidate_link_cache,
     remove_from_popularity,
 )
-from app.services.datetime_utils import to_utc_minute, utc_now
+from app.services.datetime_utils import ensure_utc, to_utc_minute, utc_now
 from app.services.link_lifecycle import archive_and_delete_link, resolve_short_code_and_track_click
 from app.services.shortcode import generate_short_code
 
@@ -72,10 +72,11 @@ async def get_link_or_404(db: AsyncSession, short_code: str) -> ShortLink:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
 
     now = utc_now()
-    if (link.expires_at and link.expires_at <= now) or (
+    expires_at = ensure_utc(link.expires_at)
+    if (expires_at and expires_at <= now) or (
         link.click_limit is not None and link.click_count >= link.click_limit
     ):
-        reason = "expired_at" if link.expires_at and link.expires_at <= now else "click_limit_reached"
+        reason = "expired_at" if expires_at and expires_at <= now else "click_limit_reached"
         await archive_and_delete_link(db, link, reason=reason)
         await db.commit()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
@@ -145,8 +146,8 @@ async def shorten_link(
         short_code=link.short_code,
         short_url=build_short_url(link.short_code),
         original_url=link.original_url,
-        created_at=link.created_at,
-        expires_at=link.expires_at,
+        created_at=ensure_utc(link.created_at),
+        expires_at=ensure_utc(link.expires_at),
         click_limit=link.click_limit,
     )
 
@@ -168,8 +169,8 @@ async def search_by_original_url(
             short_code=link.short_code,
             short_url=build_short_url(link.short_code),
             original_url=link.original_url,
-            created_at=link.created_at,
-            expires_at=link.expires_at,
+            created_at=ensure_utc(link.created_at),
+            expires_at=ensure_utc(link.expires_at),
         )
         for link in links
     ]
@@ -187,9 +188,9 @@ async def expired_history(
         ExpiredLinkResponse(
             short_code=item.short_code,
             original_url=item.original_url,
-            created_at=item.created_at,
-            expired_at=item.expired_at,
-            last_used_at=item.last_used_at,
+            created_at=ensure_utc(item.created_at),
+            expired_at=ensure_utc(item.expired_at),
+            last_used_at=ensure_utc(item.last_used_at),
             click_count=item.click_count,
             click_limit=item.click_limit,
             expiration_reason=item.expiration_reason,
@@ -247,10 +248,10 @@ async def link_stats(
     payload = {
         "short_code": link.short_code,
         "original_url": link.original_url,
-        "created_at": link.created_at.isoformat(),
+        "created_at": ensure_utc(link.created_at).isoformat(),
         "click_count": link.click_count,
-        "last_used_at": link.last_used_at.isoformat() if link.last_used_at else None,
-        "expires_at": link.expires_at.isoformat() if link.expires_at else None,
+        "last_used_at": ensure_utc(link.last_used_at).isoformat() if link.last_used_at else None,
+        "expires_at": ensure_utc(link.expires_at).isoformat() if link.expires_at else None,
         "click_limit": link.click_limit,
         "created_by_authenticated": link.created_by_authenticated,
     }
@@ -299,8 +300,8 @@ async def update_link(
         short_code=link.short_code,
         short_url=build_short_url(link.short_code),
         original_url=link.original_url,
-        created_at=link.created_at,
-        expires_at=link.expires_at,
+        created_at=ensure_utc(link.created_at),
+        expires_at=ensure_utc(link.expires_at),
         click_limit=link.click_limit,
     )
 

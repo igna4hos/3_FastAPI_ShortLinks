@@ -35,16 +35,24 @@ async def lifespan(app: FastAPI):
         await engine.dispose()
 
 
-app = FastAPI(title=settings.project_name, lifespan=lifespan)
+def create_app(*, with_lifespan: bool = True) -> FastAPI:
+    app = FastAPI(
+        title=settings.project_name,
+        lifespan=lifespan if with_lifespan else None,
+    )
 
-app.include_router(auth.router)
-app.include_router(links.router)
+    app.include_router(auth.router)
+    app.include_router(links.router)
+
+    @app.get("/{short_code}")
+    async def redirect_from_root(
+        short_code: str,
+        db=Depends(get_db),
+        redis: Redis = Depends(get_redis),
+    ):
+        return await links.execute_redirect(short_code=short_code, db=db, redis=redis)
+
+    return app
 
 
-@app.get("/{short_code}")
-async def redirect_from_root(
-    short_code: str,
-    db=Depends(get_db),
-    redis: Redis = Depends(get_redis),
-):
-    return await links.execute_redirect(short_code=short_code, db=db, redis=redis)
+app = create_app()

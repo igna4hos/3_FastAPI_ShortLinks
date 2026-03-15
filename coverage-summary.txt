@@ -1,0 +1,24 @@
+Name                             Stmts   Miss  Cover   Missing
+--------------------------------------------------------------
+app/api/deps.py                     29      0   100%
+app/api/routes/__init__.py           2      0   100%
+app/api/routes/auth.py              26      5    81%   20-24
+app/api/routes/links.py            151      3    98%   72, 120, 281
+app/core/config.py                  29      0   100%
+app/core/security.py                22      0   100%
+app/db/base.py                       3      0   100%
+app/db/session.py                    8      0   100%
+app/main.py                         34      0   100%
+app/models/__init__.py               4      0   100%
+app/models/expired_link.py          18      0   100%
+app/models/link.py                  21      0   100%
+app/models/user.py                  11      0   100%
+app/schemas/auth.py                 16      0   100%
+app/schemas/link.py                 63      1    98%   23
+app/services/cache.py               49      0   100%
+app/services/cleanup_worker.py      27      0   100%
+app/services/datetime_utils.py      12      0   100%
+app/services/link_lifecycle.py      62      0   100%
+app/services/shortcode.py            5      0   100%
+--------------------------------------------------------------
+TOTAL                              592      9    98%

@@ -6,3 +6,5 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .DS_Store
+.coverage
+tests/load/*.sqlite3
