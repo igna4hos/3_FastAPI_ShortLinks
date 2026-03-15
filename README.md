@@ -360,6 +360,8 @@ coverage html
 | app/services/shortcode.py         | 5     | 0    | 100%  |                |
 | **TOTAL**                         | **592** | **9** | **98%** |                |
 
+![Locust Test Report](tests/docs/locust_report_image.png)
+
 ### Load testing
 
 Локальный сервер для нагрузочного теста:
